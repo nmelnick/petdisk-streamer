@@ -11,8 +11,8 @@ const PORT = 3000;
 // Readonly mode
 const PETDISK_READ_ONLY = false;
 
-// Path where disk images are located
-const DISK_LIBRARY = 'disks';
+// Path where files and disk images are located
+const DISK_LIBRARY = 'library';
 
 // Maximum number of files per page
 const MAX_PAGE_SIZE = 512;

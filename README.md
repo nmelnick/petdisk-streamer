@@ -18,14 +18,22 @@ getting a container set up? Unfortunately.
 
 ## Usage
 
-In a moment, probably use docker.
+Docker:
 
-For now:
+If necessary, build using `docker build -t nmelnick/petdisk-streamer:latest .`
+
+Create a directory at `library` to store disk images and prg/seq files, or find
+an appropriate directory.
+
+Run using
+`docker run -p 3000:3000 -v library:/usr/src/app/library nmelnick/petdisk-streamer:latest`
+
+Locally:
 
 Make sure Node v12 or higher is installed, along with npm for dependency
 management.
 
-Create a directory at `disks` to store disk images and prg/seq files, or find
+Create a directory at `library` to store disk images and prg/seq files, or find
 an appropriate directory.
 
 Edit `petdisk.js` to change the library location, and/or the listen port or
