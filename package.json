@@ -1,13 +1,14 @@
 {
-  "name": "petdisk",
+  "name": "petdisk-streamer",
   "version": "1.0.0",
-  "description": "",
+  "description": "Streams files to PETdisk MAX",
   "main": "petdisk.js",
   "scripts": {
+    "start": "node petdisk.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "Nick Melnick <nrmelnick@gmail.com>",
+  "license": "GPL-3.0",
   "dependencies": {
     "express": "^4.18.2",
     "uuid": "^9.0.1"

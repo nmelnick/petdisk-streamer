@@ -17,7 +17,6 @@ const DISK_LIBRARY = 'disks';
 // Maximum number of files per page
 const MAX_PAGE_SIZE = 512;
 
-
 const TIME = 'TIME';
 if (!fs.existsSync(DISK_LIBRARY)) {
   console.error(`Disk library at "${DISK_LIBRARY}" does not exist, exiting`);
