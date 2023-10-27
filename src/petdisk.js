@@ -6,10 +6,12 @@ import os from 'os';
 import path from 'path';
 import * as url from 'url';
 
+import * as commands from './commands.js';
 import * as log from './log.js';
 
 const nanoid = customAlphabet('1234567890abcdef', 10);
 const __dirname = url.fileURLToPath(new URL('.', import.meta.url));
+const TIME = 'TIME';
 
 // Output debug statements
 const DEBUG = process.env.PD_DEBUG && process.env.PD_DEBUG === 'true' ? true : false;
@@ -26,36 +28,13 @@ const LIBRARY = process.env.PD_LIBRARY || path.resolve(path.join(__dirname, '..'
 // Maximum number of bytes per page
 const MAX_PAGE_SIZE = process.env.PD_MAX_PAGE_SIZE ? parseInt(process.env.PD_MAX_PAGE_SIZE) : 512;
 
-const TIME = 'TIME';
-
 log.setDebug(DEBUG);
+commands.setLibrary(LIBRARY);
+commands.setMaxPageSize(MAX_PAGE_SIZE);
 
 if (!fs.existsSync(LIBRARY)) {
   console.error(`Disk library at "${LIBRARY}" does not exist, exiting`);
   process.exit(1);
-}
-
-function isValidFilename(filename) {
-  return !(filename.includes('/') || filename.includes('\\'));
-}
-
-function retrieveFile(requestedFileName) {
-  const fileList = fs
-    .readdirSync(LIBRARY)
-    .filter((fn) => fn.toLowerCase() == requestedFileName.toLowerCase());
-  if (fileList && fileList[0]) {
-    return path.join(LIBRARY, fileList[0]);
-  }
-  console.error(`Invalid file: ${requestedFileName}`);
-  return;
-}
-
-function startRequest(req) {
-  const id = nanoid();
-  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-  log.info(id, `${req.method} request received from ${ip}`);
-  log.debug(id, `Path: ${req.path}, Query: ${JSON.stringify(req.query)}`);
-  return id;
 }
 
 function badRequest(res, id, message) {
@@ -66,102 +45,31 @@ function badRequest(res, id, message) {
 }
 
 const app = express();
-app.disable('x-powered-by');
-app.use(bodyParser.raw({ inflate: true, limit: '1440kb', type: '*/*' }));
 
 app.all('*', (req, res, next) => {
-  req['id'] = startRequest(req);
+  const id = nanoid();
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+  log.info(id, `${req.method} request received from ${ip}`);
+  log.debug(id, `Path: ${req.path}, Query: ${JSON.stringify(req.query)}`);
+  req['id'] = id;
   next();
 });
 
 app.get('/', (req, res) => {
-  const id = req.id
   res.set('Content-Type', 'application/octet-stream');
 
-  const filename = req.query.file;
-  const cmdLength = req.query.l && req.query.l == 1;
   const cmdDirectory = req.query.d && req.query.d == 1;
+  const filename = req.query.file;
+  const cmdTime = filename && filename === TIME;
 
   if (cmdDirectory) {
-    const page = req.query.p ? parseInt(req.query.p) : 0;
-    log.info(id, `Directory listing requested for page ${page}`);
-
-    // Only include files ending in the allowed extensions
-    const allowedExtensions = ['prg', 'seq', 'd64'];
-    const fileList = fs.readdirSync(LIBRARY)
-      .filter((fn) => {
-        const ext = path.extname(fn).toLowerCase().replace('.', '');
-        if (allowedExtensions.includes(ext)) {
-          return true;
-        }
-        return false;
-      })
-      .map((fn) => fn.toUpperCase() + "\n");
-
-    // Split list into blocks of MAX_PAGE_SIZE bytes
-    const pages = [];
-    let pageIterator = 0;
-    for (const filename of fileList) {
-      pages[pageIterator] ??= '';
-      if (pages[pageIterator].length + filename.length > MAX_PAGE_SIZE) {
-        pageIterator++;
-      }
-      pages[pageIterator] = pages[pageIterator] + filename;
-    }
-
-    // Directory list ends with two linefeeds
-    res.send((pages[page] || '') + "\n");
-    return;
-
+    return commands.getDirectory(req, res);
+  } else if (cmdTime) {
+    return commands.getTime(req, res);
   } else if (filename) {
-    if (filename === TIME) {
-      const current = new Date().toISOString().replace("T", " ").replace(/\..+/, '');
-      if (cmdLength) {
-        log.info(req.id, `Sent file TIME length`)
-        res.send(current.length + "\r\n");
-      } else {
-        log.info(req.id, `Sent file TIME as ${current}`)
-        res.send(current + "\n");
-      }
-      return;
-    }
-
-    if (!isValidFilename(filename)) {
-      badRequest(res, id, `Bad filename: ${filename}`);
-      return;
-    }
-
-    const file = retrieveFile(filename);
-    if (file) {
-      log.info(id, `File ${filename} found as ${file}`);
-      if (cmdLength) {
-        const fileSize = fs.statSync(file).size;
-        log.info(id, `Sending length of ${fileSize}`);
-        res.send(fileSize + "\r\n");
-        return;
-
-      } else if (req.query.s && req.query.e) {
-        const start = parseInt(req.query.s);
-        const end = parseInt(req.query.e);
-        log.info(id, `Sending from ${start} to ${end}`);
-
-        const rs = fs.createReadStream(
-          file,
-          {
-            start: start,
-            end: end - 1
-          }
-        );
-        const chunks = [];
-        rs.on('data', (chunk) => chunks.push(chunk));
-        rs.on('end', () => res.send(Buffer.concat(chunks)));
-        return;
-      }
-    }
+    return commands.getFile(req, res);
   }
-  res
-    .status(404)
-    .send("No");
+  return commands.no(req, res);
 });
 
 app.put('/', (req, res) => {
@@ -229,6 +137,8 @@ app.put('/', (req, res) => {
   }
 });
 
+app.disable('x-powered-by');
+app.use(bodyParser.raw({ inflate: true, limit: '1440kb', type: '*/*' }));
 app.listen(PORT, () => {
   console.log(`PETdisk MAX Streamer listening on port ${PORT}`);
 });
