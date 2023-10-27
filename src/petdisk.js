@@ -84,7 +84,29 @@ app.get('/', (req, res) => {
   const cmdLength = req.query.l && req.query.l == 1;
   const cmdDirectory = req.query.d && req.query.d == 1;
 
-  if (filename) {
+  if (cmdDirectory) {
+    const page = req.query.p ? parseInt(req.query.p) : 1;
+    logInfo(id, `Directory listing requested for page ${page}`);
+
+    const allowedExtensions = ['prg', 'seq', 'd64'];
+    const fileList = fs.readdirSync(LIBRARY)
+      .filter((fn) => {
+        const ext = path.extname(fn).replace('.', '');
+        if (allowedExtensions.includes(ext)) {
+          return true;
+        }
+        return false;
+      })
+      .map((fn) => fn.toUpperCase());
+    let output = '';
+    for (const filename of fileList.slice(page * MAX_PAGE_SIZE - MAX_PAGE_SIZE, MAX_PAGE_SIZE)) {
+      output = output + filename + "\n";
+    }
+    // Directory list ends with two linefeeds
+    res.send(output + "\n");
+    return;
+
+  } else if (filename) {
     logInfo(id, `For file ${filename}`);
 
     if (filename === TIME) {
@@ -112,26 +134,6 @@ app.get('/', (req, res) => {
           fileSize = fs.statSync(file).size;
         }
         res.send(`${fileSize}\r\n`);
-        return;
-
-      } else if (cmdDirectory) {
-        const page = req.query.p ? parseInt(req.query.p) : 1;
-        logInfo(id, `Directory listing requested for page ${page}`);
-
-        const allowedExtensions = ['prg', 'seq', 'd64'];
-        const fileList = fs.readdirSync(LIBRARY)
-          .filter((fn) => {
-            const ext = path.extname(fn).replace('.', '');
-            if (allowedExtensions.includes(ext)) {
-              return true;
-            }
-            return false;
-          })
-          .map((fn) => fn.toUpperCase());
-        for (const filename of fileList.slice(page * MAX_PAGE_SIZE - MAX_PAGE_SIZE, MAX_PAGE_SIZE)) {
-          res.write(filename + "\n");
-        }
-        res.send();
         return;
 
       } else if (req.query.s && req.query.e) {
