@@ -143,9 +143,9 @@ app.put('/', (req, res) => {
   const id = startRequest(req);
 
   if (PETDISK_READ_ONLY) {
-      // ignore writes for read only mode
-      console.info(`${id}: Read only is true, stopping`);
-      return;
+    // ignore writes for read only mode
+    console.info(`${id}: Read only is true, stopping`);
+    return;
   }
 
   const filename = req.query.f;
@@ -182,12 +182,12 @@ app.put('/', (req, res) => {
       console.info(`${id}: Updating existing file: ${writePath} from ${start} to ${end}`);
 
       const tempFileName = path.join(os.tmpdir(), nanoid());
-      const fTempWrite = fs.createWriteStream(tempFileName, {flags: 'w+'});
-      const fRead = fs.createReadStream(writePath, {start: end+1});
+      const fTempWrite = fs.createWriteStream(tempFileName, { flags: 'w+' });
+      const fRead = fs.createReadStream(writePath, { start: end + 1 });
       fRead.pipe(fTempWrite);
       fTempWrite.on('finish', () => {
         const fTempRead = fs.createReadStream(tempFileName);
-        var fWrite = fs.createWriteStream(writePath, {start: start, flags: 'r+'});
+        var fWrite = fs.createWriteStream(writePath, { start: start, flags: 'r+' });
         fWrite.write(toWrite);
         fTempRead.pipe(fWrite);
         res.send("");
