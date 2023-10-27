@@ -64,8 +64,8 @@ app.get('/', (req, res) => {
   res.set('content-type', 'application/octet-stream');
 
   const filename = req.query.file;
-  const cmdLength = req.query.l && req.query.l === 1;
-  const cmdDirectory = req.query.d && req.query.d === 1;
+  const cmdLength = req.query.l && req.query.l == 1;
+  const cmdDirectory = req.query.d && req.query.d == 1;
 
   if (filename) {
     console.info(`${id}: For file ${filename}`);

@@ -40,7 +40,7 @@ run line by one or more `-e` parameters, such as `-e PD_PORT=8080`.
 
 ### Locally:
 
-Make sure Node v12 or higher is installed, along with npm for dependency
+Make sure Node v18 or higher is installed, along with npm for dependency
 management.
 
 Create a directory at `library` to store disk images and prg/seq files, or find
