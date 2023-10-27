@@ -12,7 +12,7 @@ const PORT = 3000;
 const PETDISK_READ_ONLY = false;
 
 // Path where files and disk images are located
-const DISK_LIBRARY = 'library';
+const DISK_LIBRARY = path.resolve(path.join(__dirname, '..', 'library'));
 
 // Maximum number of files per page
 const MAX_PAGE_SIZE = 512;

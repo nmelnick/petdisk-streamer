@@ -2,9 +2,9 @@
   "name": "petdisk-streamer",
   "version": "1.0.0",
   "description": "Streams files to PETdisk MAX",
-  "main": "petdisk.js",
+  "main": "src/petdisk.js",
   "scripts": {
-    "start": "node petdisk.js",
+    "start": "node src/petdisk.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Nick Melnick <nrmelnick@gmail.com>",
