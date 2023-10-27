@@ -85,7 +85,7 @@ app.use(bodyParser.raw({ inflate: true, limit: '1440kb', type: '*/*' }));
 
 app.get('/', (req, res) => {
   const id = startRequest(req);
-  res.set('content-type', 'application/octet-stream');
+  res.set('Content-Type', 'application/octet-stream');
 
   const filename = req.query.file;
   const cmdLength = req.query.l && req.query.l == 1;
@@ -125,8 +125,13 @@ app.get('/', (req, res) => {
   } else if (filename) {
     if (filename === TIME) {
       const current = new Date().toISOString().replace("T", " ").replace(/\..+/, '');
-      logInfo(id, `Sent file TIME as ${current}`)
-      res.send(current + "\n");
+      if (cmdLength) {
+        logInfo(id, `Sent file TIME length`)
+        res.send(current.length + "\r\n");
+      } else {
+        logInfo(id, `Sent file TIME as ${current}`)
+        res.send(current + "\n");
+      }
       return;
     }
 
@@ -139,23 +144,15 @@ app.get('/', (req, res) => {
     if (file) {
       logInfo(id, `File ${filename} found as ${file}`);
       if (cmdLength) {
-        logInfo(id, `Sent length`);
-
-        let fileSize = 0;
-        if (file === TIME) {
-          // length of time field
-          // this will be YYYY-MM-DD HH:mm:ss\n
-          fileSize = "YYYY-MM-DD HH:mm:ss\n".length();
-        } else {
-          fileSize = fs.statSync(file).size;
-        }
-        res.send(`${fileSize}\r\n`);
+        const fileSize = fs.statSync(file).size;
+        logInfo(id, `Sending length of ${fileSize}`);
+        res.send(fileSize + "\r\n");
         return;
 
       } else if (req.query.s && req.query.e) {
         const start = parseInt(req.query.s);
         const end = parseInt(req.query.e);
-        logInfo(id, `Sent from ${start} to ${end}`);
+        logInfo(id, `Sending from ${start} to ${end}`);
 
         const rs = fs.createReadStream(
           file,
@@ -164,7 +161,9 @@ app.get('/', (req, res) => {
             end: end - 1
           }
         );
-        rs.pipe(res);
+        const chunks = [];
+        rs.on('data', (chunk) => chunks.push(chunk));
+        rs.on('end', () => res.send(Buffer.concat(chunks)));
         return;
       }
     }
