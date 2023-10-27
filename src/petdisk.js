@@ -61,17 +61,22 @@ function badRequest(res, id, message) {
 }
 
 function logInfo(id, message) {
-  console.info(`INFO  ${id}: ${message}`);
+  log('INFO ', id, message);
 }
 
 function logError(id, message) {
-  console.error(`ERROR ${id}: ${message}`);
+  log('ERROR', id, message);
 }
 
 function logDebug(id, message) {
   if (DEBUG) {
-    console.info(`DEBUG ${id}: ${message}`);
+    log('DEBUG', id, message);
   }
+}
+
+function log(level, id, message) {
+  const now = new Date().toISOString();
+  console.info(`${level} ${now} ${id}: ${message}`);
 }
 
 const app = express();
@@ -118,10 +123,10 @@ app.get('/', (req, res) => {
     return;
 
   } else if (filename) {
-    logInfo(id, `For file ${filename}`);
-
     if (filename === TIME) {
-      res.send(new Date().toISOString().replace("T", " ").replace(/\..+/, '') + "\n");
+      const current = new Date().toISOString().replace("T", " ").replace(/\..+/, '');
+      logInfo(id, `Sent file TIME as ${current}`)
+      res.send(current + "\n");
       return;
     }
 
@@ -132,9 +137,9 @@ app.get('/', (req, res) => {
 
     const file = retrieveFile(filename);
     if (file) {
-      logInfo(id, `File ${file} found`);
+      logInfo(id, `File ${filename} found as ${file}`);
       if (cmdLength) {
-        logInfo(id, `File ${file} sent length`);
+        logInfo(id, `Sent length`);
 
         let fileSize = 0;
         if (file === TIME) {
@@ -150,7 +155,7 @@ app.get('/', (req, res) => {
       } else if (req.query.s && req.query.e) {
         const start = parseInt(req.query.s);
         const end = parseInt(req.query.e);
-        logInfo(id, `File ${file} sent from ${start} to ${end}`);
+        logInfo(id, `Sent from ${start} to ${end}`);
 
         const rs = fs.createReadStream(
           file,
