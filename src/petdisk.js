@@ -21,7 +21,7 @@ const PETDISK_READ_ONLY = process.env.PD_READ_ONLY && process.env.PD_READ_ONLY =
 // Path where files and disk images are located
 const LIBRARY = process.env.PD_LIBRARY || path.resolve(path.join(__dirname, '..', 'library'));
 
-// Maximum number of files per page
+// Maximum number of bytes per page
 const MAX_PAGE_SIZE = process.env.PD_MAX_PAGE_SIZE ? parseInt(process.env.PD_MAX_PAGE_SIZE) : 512;
 
 const TIME = 'TIME';
@@ -88,22 +88,31 @@ app.get('/', (req, res) => {
     const page = req.query.p ? parseInt(req.query.p) : 1;
     logInfo(id, `Directory listing requested for page ${page}`);
 
+    // Only include files ending in the allowed extensions
     const allowedExtensions = ['prg', 'seq', 'd64'];
     const fileList = fs.readdirSync(LIBRARY)
       .filter((fn) => {
-        const ext = path.extname(fn).replace('.', '');
+        const ext = path.extname(fn).toLowerCase().replace('.', '');
         if (allowedExtensions.includes(ext)) {
           return true;
         }
         return false;
       })
-      .map((fn) => fn.toUpperCase());
-    let output = '';
-    for (const filename of fileList.slice(page * MAX_PAGE_SIZE - MAX_PAGE_SIZE, MAX_PAGE_SIZE)) {
-      output = output + filename + "\n";
+      .map((fn) => fn.toUpperCase() + "\n");
+
+    // Split list into blocks of MAX_PAGE_SIZE bytes
+    const pages = [];
+    let pageIterator = 0;
+    for (const filename of fileList) {
+      pages[pageIterator] ??= '';
+      if (pages[pageIterator].length + filename.length > MAX_PAGE_SIZE) {
+        pageIterator++;
+      }
+      pages[pageIterator] = pages[pageIterator] + filename;
     }
+
     // Directory list ends with two linefeeds
-    res.send(output + "\n");
+    res.send((pages[page - 1] || '') + "\n");
     return;
 
   } else if (filename) {
