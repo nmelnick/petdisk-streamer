@@ -35,9 +35,11 @@ function isValidFilename(filename) {
 }
 
 function retrieveFile(requestedFileName) {
-  const fullpath = path.join(LIBRARY, requestedFileName);
-  if (fs.existsSync(fullpath)) {
-    return fullpath;
+  const fileList = fs
+    .readdirSync(LIBRARY)
+    .filter((fn) => fn.toLowerCase() == requestedFileName.toLowerCase());
+  if (fileList && fileList[0]) {
+    return path.join(LIBRARY, fileList[0]);
   }
   console.error(`Invalid file: ${requestedFileName}`);
   return;
