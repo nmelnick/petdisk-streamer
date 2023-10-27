@@ -6,6 +6,8 @@ import os from 'os';
 import path from 'path';
 import * as url from 'url';
 
+import * as log from './log.js';
+
 const nanoid = customAlphabet('1234567890abcdef', 10);
 const __dirname = url.fileURLToPath(new URL('.', import.meta.url));
 
@@ -25,6 +27,9 @@ const LIBRARY = process.env.PD_LIBRARY || path.resolve(path.join(__dirname, '..'
 const MAX_PAGE_SIZE = process.env.PD_MAX_PAGE_SIZE ? parseInt(process.env.PD_MAX_PAGE_SIZE) : 512;
 
 const TIME = 'TIME';
+
+log.setDebug(DEBUG);
+
 if (!fs.existsSync(LIBRARY)) {
   console.error(`Disk library at "${LIBRARY}" does not exist, exiting`);
   process.exit(1);
@@ -48,43 +53,29 @@ function retrieveFile(requestedFileName) {
 function startRequest(req) {
   const id = nanoid();
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-  logInfo(id, `${req.method} request received from ${ip}`);
-  logDebug(id, `Path: ${req.path}, Query: ${JSON.stringify(req.query)}`);
+  log.info(id, `${req.method} request received from ${ip}`);
+  log.debug(id, `Path: ${req.path}, Query: ${JSON.stringify(req.query)}`);
   return id;
 }
 
 function badRequest(res, id, message) {
-  logError(id, message);
+  log.error(id, message);
   res
     .status(400)
     .send("No");
-}
-
-function logInfo(id, message) {
-  log('INFO ', id, message);
-}
-
-function logError(id, message) {
-  log('ERROR', id, message);
-}
-
-function logDebug(id, message) {
-  if (DEBUG) {
-    log('DEBUG', id, message);
-  }
-}
-
-function log(level, id, message) {
-  const now = new Date().toISOString();
-  console.info(`${level} ${now} ${id}: ${message}`);
 }
 
 const app = express();
 app.disable('x-powered-by');
 app.use(bodyParser.raw({ inflate: true, limit: '1440kb', type: '*/*' }));
 
+app.all('*', (req, res, next) => {
+  req['id'] = startRequest(req);
+  next();
+});
+
 app.get('/', (req, res) => {
-  const id = startRequest(req);
+  const id = req.id
   res.set('Content-Type', 'application/octet-stream');
 
   const filename = req.query.file;
@@ -93,7 +84,7 @@ app.get('/', (req, res) => {
 
   if (cmdDirectory) {
     const page = req.query.p ? parseInt(req.query.p) : 0;
-    logInfo(id, `Directory listing requested for page ${page}`);
+    log.info(id, `Directory listing requested for page ${page}`);
 
     // Only include files ending in the allowed extensions
     const allowedExtensions = ['prg', 'seq', 'd64'];
@@ -126,10 +117,10 @@ app.get('/', (req, res) => {
     if (filename === TIME) {
       const current = new Date().toISOString().replace("T", " ").replace(/\..+/, '');
       if (cmdLength) {
-        logInfo(id, `Sent file TIME length`)
+        log.info(req.id, `Sent file TIME length`)
         res.send(current.length + "\r\n");
       } else {
-        logInfo(id, `Sent file TIME as ${current}`)
+        log.info(req.id, `Sent file TIME as ${current}`)
         res.send(current + "\n");
       }
       return;
@@ -142,17 +133,17 @@ app.get('/', (req, res) => {
 
     const file = retrieveFile(filename);
     if (file) {
-      logInfo(id, `File ${filename} found as ${file}`);
+      log.info(id, `File ${filename} found as ${file}`);
       if (cmdLength) {
         const fileSize = fs.statSync(file).size;
-        logInfo(id, `Sending length of ${fileSize}`);
+        log.info(id, `Sending length of ${fileSize}`);
         res.send(fileSize + "\r\n");
         return;
 
       } else if (req.query.s && req.query.e) {
         const start = parseInt(req.query.s);
         const end = parseInt(req.query.e);
-        logInfo(id, `Sending from ${start} to ${end}`);
+        log.info(id, `Sending from ${start} to ${end}`);
 
         const rs = fs.createReadStream(
           file,
@@ -174,11 +165,11 @@ app.get('/', (req, res) => {
 });
 
 app.put('/', (req, res) => {
-  const id = startRequest(req);
+  const id = req.id;
 
   if (PETDISK_READ_ONLY) {
     // ignore writes for read only mode
-    logInfo(id, `Read only is true, stopping`);
+    log.info(id, `Read only is true, stopping`);
     return;
   }
 
@@ -203,7 +194,7 @@ app.put('/', (req, res) => {
 
   // remove existing file if new specified
   if (exists && cmdNew) {
-    logInfo(id, `Removed existing file: ${writePath}`);
+    log.info(id, `Removed existing file: ${writePath}`);
     fs.unlinkSync(writePath);
     exists = false;
   }
@@ -213,7 +204,7 @@ app.put('/', (req, res) => {
     const start = parseInt(req.query.s);
     const end = parseInt(req.query.e);
     if (exists) {
-      logInfo(id, `Updating existing file: ${writePath} from ${start} to ${end}`);
+      log.info(id, `Updating existing file: ${writePath} from ${start} to ${end}`);
 
       const tempFileName = path.join(os.tmpdir(), nanoid());
       const fTempWrite = fs.createWriteStream(tempFileName, { flags: 'w+' });
@@ -231,7 +222,7 @@ app.put('/', (req, res) => {
       return;
     }
   } else {
-    logInfo(id, `Appending to path: ${writePath} with ${toWrite.length} bytes`);
+    log.info(id, `Appending to path: ${writePath} with ${toWrite.length} bytes`);
     // append block to end of file
     fs.appendFileSync(writePath, toWrite);
     res.send("");
