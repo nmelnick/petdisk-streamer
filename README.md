@@ -34,6 +34,7 @@ run line by one or more `-e` parameters, such as `-e PD_PORT=8080`.
 | Variable         | Default   | Description                          |
 |------------------|-----------|--------------------------------------|
 | PD_PORT          | 3000      | HTTP listen port                     |
+| PD_DEBUG         | false     | Log debug statements                 |
 | PD_READ_ONLY     | false     | True if writes are disabled          |
 | PD_LIBRARY       | ./library | Location of files to serve           |
 | PD_MAX_PAGE_SIZE | 512       | Number of directory entries per page |

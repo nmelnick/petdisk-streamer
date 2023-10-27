@@ -9,6 +9,9 @@ import * as url from 'url';
 const nanoid = customAlphabet('1234567890abcdef', 10);
 const __dirname = url.fileURLToPath(new URL('.', import.meta.url));
 
+// Output debug statements
+const DEBUG = process.env.PD_DEBUG && process.env.PD_DEBUG === 'true' ? true : false;
+
 // HTTP listen port
 const PORT = process.env.PD_PORT ? parseInt(process.env.PD_PORT) : 3000;
 
@@ -43,17 +46,31 @@ function retrieveFile(requestedFileName) {
 function startRequest(req) {
   const id = nanoid();
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-  console.info(`${id}: ${req.method} request received from ${ip}`);
+  logInfo(id, `${req.method} request received from ${ip}`);
+  logDebug(id, `Path: ${req.path}, Query: ${JSON.stringify(req.query)}`);
   return id;
 }
 
-function badRequest(res, message) {
-  console.error(message);
+function badRequest(res, id, message) {
+  logError(id, message);
   res
     .status(400)
     .send("No");
 }
 
+function logInfo(id, message) {
+  console.info(`INFO  ${id}: ${message}`);
+}
+
+function logError(id, message) {
+  console.error(`ERROR ${id}: ${message}`);
+}
+
+function logDebug(id, message) {
+  if (DEBUG) {
+    console.info(`DEBUG ${id}: ${message}`);
+  }
+}
 
 const app = express();
 app.disable('x-powered-by');
@@ -68,7 +85,7 @@ app.get('/', (req, res) => {
   const cmdDirectory = req.query.d && req.query.d == 1;
 
   if (filename) {
-    console.info(`${id}: For file ${filename}`);
+    logInfo(id, `For file ${filename}`);
 
     if (filename === TIME) {
       res.send(new Date().toISOString().replace("T", " ").replace(/\..+/, '') + "\n");
@@ -76,15 +93,15 @@ app.get('/', (req, res) => {
     }
 
     if (!isValidFilename(filename)) {
-      badRequest(res, `${id}: Bad filename: ${filename}`);
+      badRequest(res, id, `Bad filename: ${filename}`);
       return;
     }
 
     const file = retrieveFile(filename);
     if (file) {
-      console.info(`${id}: File ${file} found`);
+      logInfo(id, `File ${file} found`);
       if (cmdLength) {
-        console.info(`${id}: File ${file} sent length`);
+        logInfo(id, `File ${file} sent length`);
 
         let fileSize = 0;
         if (file === TIME) {
@@ -99,7 +116,7 @@ app.get('/', (req, res) => {
 
       } else if (cmdDirectory) {
         const page = req.query.p ? parseInt(req.query.p) : 1;
-        console.info(`${id}: Directory listing requested for page ${page}`);
+        logInfo(id, `Directory listing requested for page ${page}`);
 
         const allowedExtensions = ['prg', 'seq', 'd64'];
         const fileList = fs.readdirSync(LIBRARY)
@@ -120,7 +137,7 @@ app.get('/', (req, res) => {
       } else if (req.query.s && req.query.e) {
         const start = parseInt(req.query.s);
         const end = parseInt(req.query.e);
-        console.info(`${id}: File ${file} sent from ${start} to ${end}`);
+        logInfo(id, `File ${file} sent from ${start} to ${end}`);
 
         const rs = fs.createReadStream(
           file,
@@ -144,7 +161,7 @@ app.put('/', (req, res) => {
 
   if (PETDISK_READ_ONLY) {
     // ignore writes for read only mode
-    console.info(`${id}: Read only is true, stopping`);
+    logInfo(id, `Read only is true, stopping`);
     return;
   }
 
@@ -154,7 +171,7 @@ app.put('/', (req, res) => {
   const cmdUpdate = req.query.u;
 
   if (!isValidFilename(filename)) {
-    badRequest(res, `${id}: Bad filename: ${filename}`);
+    badRequest(res, id, `Bad filename: ${filename}`);
     return;
   }
 
@@ -163,13 +180,13 @@ app.put('/', (req, res) => {
 
   const toWrite = isB64 ? Buffer.from(req.body, 'base64') : req.body;
   if (!toWrite.length) {
-    badRequest(res, `${id}: Sent no body, nothing to update or append to`);
+    badRequest(res, id, `Sent no body, nothing to update or append to`);
     return;
   }
 
   // remove existing file if new specified
   if (exists && cmdNew) {
-    console.info(`${id}: Removed existing file: ${writePath}`);
+    logInfo(id, `Removed existing file: ${writePath}`);
     fs.unlinkSync(writePath);
     exists = false;
   }
@@ -179,7 +196,7 @@ app.put('/', (req, res) => {
     const start = parseInt(req.query.s);
     const end = parseInt(req.query.e);
     if (exists) {
-      console.info(`${id}: Updating existing file: ${writePath} from ${start} to ${end}`);
+      logInfo(id, `Updating existing file: ${writePath} from ${start} to ${end}`);
 
       const tempFileName = path.join(os.tmpdir(), nanoid());
       const fTempWrite = fs.createWriteStream(tempFileName, { flags: 'w+' });
@@ -193,11 +210,11 @@ app.put('/', (req, res) => {
         res.send("");
       });
     } else {
-      badRequest(`${id}: Attempted to update non-existent file: ${writePath}`);
+      badRequest(res, id, `Attempted to update non-existent file: ${writePath}`);
       return;
     }
   } else {
-    console.info(`${id}: Appending to path: ${writePath} with ${toWrite.length} bytes`);
+    logInfo(id, `Appending to path: ${writePath} with ${toWrite.length} bytes`);
     // append block to end of file
     fs.appendFileSync(writePath, toWrite);
     res.send("");
