@@ -63,8 +63,11 @@ app.get('/', (req, res) => {
   const id = startRequest(req);
   res.set('content-type', 'application/octet-stream');
 
-  if (req.query.file) {
-    const filename = req.query.file;
+  const filename = req.query.file;
+  const cmdLength = req.query.l && req.query.l === 1;
+  const cmdDirectory = req.query.d && req.query.d === 1;
+
+  if (filename) {
     console.info(`${id}: For file ${filename}`);
 
     if (filename === TIME) {
@@ -80,7 +83,7 @@ app.get('/', (req, res) => {
     const file = retrieveFile(filename);
     if (file) {
       console.info(`${id}: File ${file} found`);
-      if (req.query.l && req.query.l == 1) {
+      if (cmdLength) {
         console.info(`${id}: File ${file} sent length`);
 
         let fileSize = 0;
@@ -94,7 +97,7 @@ app.get('/', (req, res) => {
         res.send(`${fileSize}\r\n`);
         return;
 
-      } else if (req.query.d && req.query.d == 1) {
+      } else if (cmdDirectory) {
         const page = req.query.p ? parseInt(req.query.p) : 1;
         console.info(`${id}: Directory listing requested for page ${page}`);
 
@@ -146,14 +149,14 @@ app.put('/', (req, res) => {
   }
 
   const filename = req.query.f;
+  const isB64 = req.query.b64;
+  const cmdNew = req.query.n;
+  const cmdUpdate = req.query.u;
+
   if (!isValidFilename(filename)) {
     badRequest(res, `${id}: Bad filename: ${filename}`);
     return;
   }
-
-  const isNew = req.query.n;
-  const isUpdate = req.query.u;
-  const isB64 = req.query.b64;
 
   const writePath = path.join(LIBRARY, filename);
   let exists = fs.existsSync(writePath);
@@ -165,13 +168,13 @@ app.put('/', (req, res) => {
   }
 
   // remove existing file if new specified
-  if (exists && isNew) {
+  if (exists && cmdNew) {
     console.info(`${id}: Removed existing file: ${writePath}`);
     fs.unlinkSync(writePath);
     exists = false;
   }
 
-  if (isUpdate) {
+  if (cmdUpdate) {
     // update specific block
     const start = parseInt(req.query.s);
     const end = parseInt(req.query.e);
@@ -179,14 +182,14 @@ app.put('/', (req, res) => {
       console.info(`${id}: Updating existing file: ${writePath} from ${start} to ${end}`);
 
       const tempFileName = path.join(os.tmpdir(), nanoid());
-      const fWrite = fs.createWriteStream(tempFileName, {flags: 'w+'});
+      const fTempWrite = fs.createWriteStream(tempFileName, {flags: 'w+'});
       const fRead = fs.createReadStream(writePath, {start: end+1});
-      fRead.pipe(fWrite);
-      fWrite.on('finish', () => {
-        const fRead2 = fs.createReadStream(tempFileName);
-        var fWrite2 = fs.createWriteStream(writePath, {start: start, flags: 'r+'});
-        fWrite2.write(toWrite);
-        fRead2.pipe(fWrite2);
+      fRead.pipe(fTempWrite);
+      fTempWrite.on('finish', () => {
+        const fTempRead = fs.createReadStream(tempFileName);
+        var fWrite = fs.createWriteStream(writePath, {start: start, flags: 'r+'});
+        fWrite.write(toWrite);
+        fTempRead.pipe(fWrite);
         res.send("");
       });
     } else {
@@ -204,4 +207,3 @@ app.put('/', (req, res) => {
 app.listen(PORT, () => {
   console.log(`PETdisk MAX Streamer listening on port ${PORT}`);
 });
-
