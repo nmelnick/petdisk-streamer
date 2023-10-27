@@ -87,7 +87,7 @@ app.get('/', (req, res) => {
   const cmdDirectory = req.query.d && req.query.d == 1;
 
   if (cmdDirectory) {
-    const page = req.query.p ? parseInt(req.query.p) : 1;
+    const page = req.query.p ? parseInt(req.query.p) : 0;
     logInfo(id, `Directory listing requested for page ${page}`);
 
     // Only include files ending in the allowed extensions
@@ -114,7 +114,7 @@ app.get('/', (req, res) => {
     }
 
     // Directory list ends with two linefeeds
-    res.send((pages[page - 1] || '') + "\n");
+    res.send((pages[page] || '') + "\n");
     return;
 
   } else if (filename) {
