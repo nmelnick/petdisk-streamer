@@ -6,20 +6,20 @@ const path = require('path');
 const uuid = require('uuid');
 
 // HTTP listen port
-const PORT = 3000;
+const PORT = process.env.PD_PORT ? parseInt(process.env.PD_PORT) : 3000;
 
 // Readonly mode
-const PETDISK_READ_ONLY = false;
+const PETDISK_READ_ONLY = process.env.PD_READ_ONLY && process.env.PD_READ_ONLY === 'true' ? true : false;
 
 // Path where files and disk images are located
-const DISK_LIBRARY = path.resolve(path.join(__dirname, '..', 'library'));
+const LIBRARY = process.env.PD_LIBRARY || path.resolve(path.join(__dirname, '..', 'library'));
 
 // Maximum number of files per page
-const MAX_PAGE_SIZE = 512;
+const MAX_PAGE_SIZE = process.env.PD_MAX_PAGE_SIZE ? parseInt(process.env.PD_MAX_PAGE_SIZE) : 512;
 
 const TIME = 'TIME';
-if (!fs.existsSync(DISK_LIBRARY)) {
-  console.error(`Disk library at "${DISK_LIBRARY}" does not exist, exiting`);
+if (!fs.existsSync(LIBRARY)) {
+  console.error(`Disk library at "${LIBRARY}" does not exist, exiting`);
   process.exit(1);
 }
 
@@ -31,7 +31,7 @@ function isValidFilename(filename) {
 }
 
 function retrieveFile(requestedFileName) {
-  const fullpath = path.join(DISK_LIBRARY, requestedFileName);
+  const fullpath = path.join(LIBRARY, requestedFileName);
   if (fs.existsSync(fullpath)) {
     return fullpath;
   }
@@ -98,7 +98,7 @@ app.get('/', (req, res) => {
         console.info(`${id}: Directory listing requested for page ${page}`);
 
         const allowedExtensions = ['prg', 'seq', 'd64'];
-        const fileList = fs.readdirSync(DISK_LIBRARY)
+        const fileList = fs.readdirSync(LIBRARY)
           .filter((fn) => {
             const ext = path.extname(fn).replace('.', '');
             if (allowedExtensions.includes(ext)) {
@@ -154,7 +154,7 @@ app.put('/', (req, res) => {
   const isUpdate = req.query.u;
   const isB64 = req.query.b64;
 
-  const writePath = path.join(DISK_LIBRARY, filename);
+  const writePath = path.join(LIBRARY, filename);
   let exists = fs.existsSync(writePath);
 
   const toWrite = isB64 ? Buffer.from(req.body, 'base64') : req.body;

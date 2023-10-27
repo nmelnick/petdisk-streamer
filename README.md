@@ -18,7 +18,7 @@ getting a container set up? Unfortunately.
 
 ## Usage
 
-Docker:
+### Docker:
 
 If necessary, build using `docker build -t nmelnick/petdisk-streamer:latest .`
 
@@ -28,7 +28,17 @@ an appropriate directory.
 Run using
 `docker run -p 3000:3000 -v library:/usr/src/app/library nmelnick/petdisk-streamer:latest`
 
-Locally:
+Environment variables can be used to customize options, and added to the docker
+run line by one or more `-e` parameters, such as `-e PD_PORT=8080`.
+
+| Variable         | Default   | Description                          |
+|------------------|-----------|--------------------------------------|
+| PD_PORT          | 3000      | HTTP listen port                     |
+| PD_READ_ONLY     | false     | True if writes are disabled          |
+| PD_LIBRARY       | ./library | Location of files to serve           |
+| PD_MAX_PAGE_SIZE | 512       | Number of directory entries per page |
+
+### Locally:
 
 Make sure Node v12 or higher is installed, along with npm for dependency
 management.
