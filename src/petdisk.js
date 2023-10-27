@@ -156,7 +156,7 @@ app.get('/', (req, res) => {
           file,
           {
             start: start,
-            end: end
+            end: end - 1
           }
         );
         rs.pipe(res);
