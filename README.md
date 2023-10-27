@@ -6,9 +6,15 @@ from
 [bitfixer's petdisk-max repository](https://github.com/bitfixer/petdisk-max)
 to JavaScript from PHP.
 
-Note that as of this commit, I have not yet plugged in the PETdisk MAX to make
-sure this works. This is mostly a port of existing code, and there are a couple
-of modes I need to validate came over properly.
+What works?
+* Listing directories
+* Loading files
+
+What doesn't work?
+* Saving files -- but I am not certain that normally works?
+
+Please note that this should be run behind a web server on port 80, as the
+PETdisk MAX does not support ports in the URL at this time.
 
 ## Why?
 
