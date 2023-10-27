@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Streams files to PETdisk MAX",
   "main": "src/petdisk.js",
+  "type": "module",
   "scripts": {
     "start": "node src/petdisk.js",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -11,6 +12,6 @@
   "license": "GPL-3.0",
   "dependencies": {
     "express": "^4.18.2",
-    "uuid": "^9.0.1"
+    "nanoid": "^5.0.2"
   }
 }

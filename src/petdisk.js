@@ -1,9 +1,13 @@
-const bodyParser = require('body-parser');
-const express = require('express');
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
-const uuid = require('uuid');
+import bodyParser from 'body-parser';
+import express from 'express';
+import fs from 'fs';
+import { customAlphabet } from 'nanoid';
+import os from 'os';
+import path from 'path';
+import * as url from 'url';
+
+const nanoid = customAlphabet('1234567890abcdef', 10);
+const __dirname = url.fileURLToPath(new URL('.', import.meta.url));
 
 // HTTP listen port
 const PORT = process.env.PD_PORT ? parseInt(process.env.PD_PORT) : 3000;
@@ -24,10 +28,7 @@ if (!fs.existsSync(LIBRARY)) {
 }
 
 function isValidFilename(filename) {
-  if (filename.includes('/') || filename.includes('\\')) {
-    return false;
-  }
-  return true;
+  return !(filename.includes('/') || filename.includes('\\'));
 }
 
 function retrieveFile(requestedFileName) {
@@ -40,7 +41,7 @@ function retrieveFile(requestedFileName) {
 }
 
 function startRequest(req) {
-  const id = uuid.v4();
+  const id = nanoid();
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
   console.info(`${id}: ${req.method} request received from ${ip}`);
   return id;
@@ -177,7 +178,7 @@ app.put('/', (req, res) => {
     if (exists) {
       console.info(`${id}: Updating existing file: ${writePath} from ${start} to ${end}`);
 
-      const tempFileName = path.join(os.tmpdir(), uuid.v4());
+      const tempFileName = path.join(os.tmpdir(), nanoid());
       const fWrite = fs.createWriteStream(tempFileName, {flags: 'w+'});
       const fRead = fs.createReadStream(writePath, {start: end+1});
       fRead.pipe(fWrite);
