@@ -32,7 +32,7 @@ Create a directory at `library` to store disk images and prg/seq files, or find
 an appropriate directory.
 
 Run using
-`docker run -p 3000:3000 -v library:/usr/src/app/library nmelnick/petdisk-streamer:latest`
+`docker run -p 3000:3000 -v library:/library nmelnick/petdisk-streamer:latest`
 
 Environment variables can be used to customize options, and added to the docker
 run line by one or more `-e` parameters, such as `-e PD_PORT=8080`.
