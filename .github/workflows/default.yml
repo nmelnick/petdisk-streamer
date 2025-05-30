@@ -50,5 +50,5 @@ jobs:
         with:
           context: .
           platforms: linux/amd64,linux/arm64
-          push: ${{ github.repository == 'nmelnick/petdisk-streamer' && github.ref == 'refs/heads/main' ? true : false }}
+          push: ${{ github.repository == 'nmelnick/petdisk-streamer' && github.ref == 'refs/heads/main' && true || false }}
           tags: nmelnick/petdisk-streamer:latest
